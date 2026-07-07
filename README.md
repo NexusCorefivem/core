@@ -229,55 +229,7 @@ Included files:
 
 ### How to import this as a custom recipe in txAdmin
 
-This is the only part that really matters for using the YML file.
-
-#### 1. Put Nexus Core on GitHub
-
-The recipe must be hosted online so txAdmin can read it.
-
-Make sure:
-
-- your full Nexus Core project is in a GitHub repository
-- `recipe.yaml` exists in the root of that repository
-
-#### 2. Edit the `src` line inside `recipe.yaml`
-
-Open `recipe.yaml` and change this:
-
-```yaml
-src: YOUR_GITHUB_USERNAME/YOUR_NEXUS_CORE_REPOSITORY
-```
-
-to your actual repo, for example:
-
-```yaml
-src: yourusername/nexus-core
-```
-
-If your branch is not `main`, also change:
-
-```yaml
-ref: main
-```
-
-to:
-
-```yaml
-ref: master
-```
-
-or your real branch name.
-
-#### 3. Push the edited YML file to GitHub
-
-txAdmin will only read what is on GitHub, not what is only local on your PC.
-
-#### 4. Copy the raw URL of `recipe.yaml`
-
-Use the raw file URL, for example:
-
-```text
-https://raw.githubusercontent.com/yourusername/nexus-core/main/recipe.yaml
+https://raw.githubusercontent.com/NexusCorefivem/core/recipe.yaml
 ```
 
 Do not use the normal GitHub page URL with `/blob/`.
@@ -315,16 +267,6 @@ When txAdmin imports this recipe, it will:
 7. replace txAdmin placeholders in `server.cfg`
 8. import `nexus-core/sql/schema.sql`
 9. clean temporary files
-
-### Most important thing to change in the YML
-
-For this recipe to work, this line must be changed:
-
-```yaml
-src: YOUR_GITHUB_USERNAME/YOUR_NEXUS_CORE_REPOSITORY
-```
-
-That line tells txAdmin where it should download Nexus Core from.
 
 ### Common mistakes
 
