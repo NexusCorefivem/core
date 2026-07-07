@@ -1,0 +1,6 @@
+body { margin: 0; font-family: Arial, sans-serif; color: #fff; background: transparent; }
+.hidden, #app.hidden { display: none !important; }
+#app { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); }
+.panel { width: 500px; background: #111827; padding: 20px; border-radius: 16px; }
+.row { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+button { margin-top: 12px; width: 100%; padding: 10px; border: none; border-radius: 8px; background: #2563eb; color: #fff; }

@@ -1,9 +1,23 @@
+local validStates = {
+    stored = true,
+    out = true,
+    impounded = true,
+    impound = true
+}
+
 local function generatePlate()
     return ("NX%s"):format(math.random(10000, 99999))
 end
 
 local function isValidVehicleModel(model)
     return type(model) == "string" and #model > 0 and #model <= 60 and model:match("^[%w_]+$") ~= nil
+end
+
+local function clampVehicleStats(fuel, engine, body)
+    return
+        NexusShared.Clamp(tonumber(fuel) or 100, 0, 100),
+        NexusShared.Clamp(tonumber(engine) or 1000, 0, 1000),
+        NexusShared.Clamp(tonumber(body) or 1000, 0, 1000)
 end
 
 exports("CreateVehicleRecord", function(source, model, garage)
@@ -69,16 +83,26 @@ RegisterNexusCallback("nexus:vehicles:updateState", function(source, payload)
         return false
     end
 
+    if not NexusSecurity.CheckRateLimit(source, "vehicles:update", 2) then
+        return false
+    end
+
     local plate = payload.plate
     if type(plate) ~= "string" or #plate > 20 then
         return false
     end
 
     local state = payload.state or "stored"
+    if not validStates[state] then
+        return false
+    end
+
     local garage = payload.garage or "pillbox"
-    local fuel = tonumber(payload.fuel) or 100
-    local engine = tonumber(payload.engine) or 1000
-    local body = tonumber(payload.body) or 1000
+    if not NexusConfig.Garages[garage] then
+        garage = "pillbox"
+    end
+
+    local fuel, engine, body = clampVehicleStats(payload.fuel, payload.engine, payload.body)
     local mods = type(payload.mods) == "table" and json.encode(payload.mods) or "{}"
 
     local updated = NexusDatabase.Execute([[

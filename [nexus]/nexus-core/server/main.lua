@@ -1,5 +1,5 @@
 NexusCore = {
-    version = "1.0.0"
+    version = NexusConfig.Framework.version
 }
 
 math.randomseed(GetGameTimer())
@@ -109,9 +109,32 @@ local function decodeJson(value, fallback)
     return fallback
 end
 
+local function generatePhone()
+    return ("06%08d"):format(math.random(10000000, 99999999))
+end
+
 local function isCharacterCreateAllowedPayload(payload)
     return type(payload) == "table"
 end
+
+local function isPlayerBanned(source)
+    return NexusSecurity.GetBanForSource(source)
+end
+
+AddEventHandler("playerConnecting", function(_, _, deferrals)
+    local source = source
+    deferrals.defer()
+    Wait(0)
+    deferrals.update("Nexus Core: checking ban status...")
+
+    local banResult = isPlayerBanned(source)
+    if banResult.banned then
+        deferrals.done(banResult.reason or "You are banned from this server.")
+        return
+    end
+
+    deferrals.done()
+end)
 
 local function getOrCreateAccount(source)
     local identifier = getPrimaryIdentifier(source)
@@ -167,10 +190,10 @@ RegisterNexusCallback("nexus:characters:create", function(source, payload)
 
     local characterId = NexusDatabase.Insert([[
         INSERT INTO nexus_characters (
-            account_id, citizenid, firstname, lastname, dateofbirth, gender,
-            cash, bank, dirty_money, job_name, job_grade, job_duty, spawn, appearance, metadata
-            , locale, last_location
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            account_id, citizenid, firstname, lastname, dateofbirth, gender, nationality, phone,
+            cash, bank, dirty_money, job_name, job_grade, job_duty, gang_name, gang_grade,
+            spawn, appearance, metadata, locale, last_location
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ]], {
         accountId,
         citizenId,
@@ -178,11 +201,15 @@ RegisterNexusCallback("nexus:characters:create", function(source, payload)
         sanitizeName(payload.lastname, NexusTranslate(NexusConfig.Framework.defaultLocale, "core.character_lastname")),
         sanitizeDateOfBirth(payload.dateofbirth),
         sanitizeGender(payload.gender),
+        "NL",
+        generatePhone(),
         NexusConfig.Money.defaultCash,
         NexusConfig.Money.defaultBank,
         NexusConfig.Money.defaultDirty,
         "unemployed",
         0,
+        0,
+        "none",
         0,
         spawn,
         buildDefaultAppearance(sanitizeGender(payload.gender)),
@@ -216,29 +243,13 @@ RegisterNexusCallback("nexus:characters:delete", function(source, payload)
     return affected and affected > 0
 end)
 
-RegisterNexusCallback("nexus:characters:updateAppearance", function(source, payload)
+RegisterNexusCallback("nexus:characters:updateLocation", function(source, payload)
     local player = GetNexusPlayer(source)
     if not player or type(payload) ~= "table" then
         return false
     end
 
-    player.appearance = json.encode(payload)
-    player:Save()
-    return true
-end)
-
-RegisterNexusCallback("nexus:characters:getAppearance", function(source)
-    local player = GetNexusPlayer(source)
-    if not player then
-        return nil
-    end
-
-    return decodeJson(player.appearance, {})
-end)
-
-RegisterNexusCallback("nexus:characters:updateLocation", function(source, payload)
-    local player = GetNexusPlayer(source)
-    if not player or type(payload) ~= "table" then
+    if not NexusSecurity.CheckRateLimit(source, "location", 30) then
         return false
     end
 
@@ -262,6 +273,13 @@ end)
 
 RegisterNetEvent(NexusEvents.characterSelected, function(characterId)
     local source = source
+
+    local banResult = isPlayerBanned(source)
+    if banResult.banned then
+        DropPlayer(source, banResult.reason or "Banned.")
+        return
+    end
+
     characterId = tonumber(characterId)
     if not characterId then
         DropPlayer(source, NexusTranslate(NexusConfig.Framework.defaultLocale, "core.invalid_character"))
@@ -278,7 +296,7 @@ RegisterNetEvent(NexusEvents.characterSelected, function(characterId)
         return
     end
 
-    local character = NexusDatabase.FetchSingle("SELECT * FROM nexus_characters WHERE id = ? AND account_id = ?", {
+    local character = NexusDatabase.FetchSingle("SELECT * FROM nexus_characters WHERE id = ? AND account_id = ? AND deleted_at IS NULL", {
         characterId, accountId
     })
 
@@ -287,22 +305,26 @@ RegisterNetEvent(NexusEvents.characterSelected, function(characterId)
         return
     end
 
-    local player = Player.new(source, accountId, character)
+    local license = getPrimaryIdentifier(source)
+    local player = NexusPlayer.new(source, accountId, character, license)
+    player.permissions = NexusPermissions.GetGroup(source)
     SetNexusPlayer(source, player)
 
-    TriggerClientEvent(NexusEvents.playerLoaded, source, {
-        source = source,
-        accountId = player.accountId,
-        characterId = player.characterId,
-        citizenId = player.citizenId,
-        name = player:GetName(),
-        money = player.money,
-        job = player.job,
-        locale = player.locale,
-        permissions = NexusPermissions.GetGroup(source),
-        spawn = decodeJson(character.last_location, decodeJson(character.spawn, {})),
-        appearance = decodeJson(character.appearance, {})
-    })
+    local playerData = player:GetPlayerData()
+    local playerState = Player(source)
+    if playerState and playerState.state then
+        playerState.state:set("isLoggedIn", true, true)
+        playerState.state:set("citizenid", player.citizenId, true)
+        playerState.state:set("job", playerData.job, true)
+        playerState.state:set("gang", playerData.gang, true)
+    end
+
+    TriggerEvent(NexusEvents.serverPlayerLoaded, source, player)
+    TriggerEvent(NexusEvents.serverOnPlayerLoaded, source, player, playerData)
+
+    TriggerClientEvent(NexusEvents.playerLoaded, source, playerData)
+    TriggerClientEvent(NexusEvents.clientOnPlayerLoaded, source, playerData)
+    TriggerClientEvent(NexusEvents.clientSetPlayerData, source, playerData)
 end)
 
 RegisterNetEvent(NexusEvents.setLocale, function(locale)
@@ -341,5 +363,7 @@ AddEventHandler("onResourceStop", function(resourceName)
 end)
 
 NexusDatabase.OnReady(function()
-    print(("[nexus-core] %s initialized."):format(NexusConfig.Framework.name))
+    if NexusConfig.Framework.debug then
+        print(("[nexus-core] %s v%s initialized."):format(NexusConfig.Framework.name, NexusConfig.Framework.version))
+    end
 end)

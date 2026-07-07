@@ -1,0 +1,20 @@
+RegisterNetEvent("nexus:ambulance:client:heal", function(amount)
+    local ped = PlayerPedId()
+    SetEntityHealth(ped, math.min(200, GetEntityHealth(ped) + (tonumber(amount) or 50)))
+end)
+
+RegisterNetEvent("nexus:ambulance:client:revive", function()
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    NetworkResurrectLocalPlayer(coords.x, coords.y, coords.z, GetEntityHeading(ped), true, false)
+    SetEntityHealth(ped, 200)
+    ClearPedBloodDamage(ped)
+end)
+
+RegisterCommand("heal", function(_, args)
+    TriggerServerEvent("nexus:ambulance:heal", tonumber(args[1]))
+end, false)
+
+RegisterCommand("revive", function(_, args)
+    TriggerServerEvent("nexus:ambulance:revive", tonumber(args[1]))
+end, false)

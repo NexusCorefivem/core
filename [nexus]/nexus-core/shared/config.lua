@@ -2,7 +2,8 @@ NexusConfig = {}
 
 NexusConfig.Framework = {
     name = "Nexus Core",
-    debug = true,
+    version = "0.0.2-beta",
+    debug = GetConvar("nexus:debug", "0") == "1",
     defaultSpawn = vector4(-1037.72, -2737.88, 20.17, 329.56),
     maxCharacters = 4,
     defaultLocale = "nl",
@@ -32,20 +33,58 @@ NexusConfig.Jobs = {
     },
     police = {
         labelKey = "jobs.police.label",
+        type = "leo",
         defaultDuty = false,
         grades = {
             [0] = { labelKey = "jobs.police.grade_0", paycheck = 350 },
             [1] = { labelKey = "jobs.police.grade_1", paycheck = 450 },
-            [2] = { labelKey = "jobs.police.grade_2", paycheck = 600 }
+            [2] = { labelKey = "jobs.police.grade_2", paycheck = 600, isboss = true }
         }
     },
     ambulance = {
         labelKey = "jobs.ambulance.label",
+        type = "ems",
         defaultDuty = false,
         grades = {
             [0] = { labelKey = "jobs.ambulance.grade_0", paycheck = 300 },
             [1] = { labelKey = "jobs.ambulance.grade_1", paycheck = 425 },
-            [2] = { labelKey = "jobs.ambulance.grade_2", paycheck = 550 }
+            [2] = { labelKey = "jobs.ambulance.grade_2", paycheck = 550, isboss = true }
+        }
+    },
+    taxi = {
+        labelKey = "jobs.taxi.label",
+        defaultDuty = false,
+        grades = {
+            [0] = { labelKey = "jobs.taxi.grade_0", paycheck = 200 }
+        }
+    },
+    bus = {
+        labelKey = "jobs.bus.label",
+        defaultDuty = false,
+        grades = {
+            [0] = { labelKey = "jobs.bus.grade_0", paycheck = 180 }
+        }
+    },
+    trucker = {
+        labelKey = "jobs.trucker.label",
+        defaultDuty = false,
+        grades = {
+            [0] = { labelKey = "jobs.trucker.grade_0", paycheck = 220 }
+        }
+    },
+    garbage = {
+        labelKey = "jobs.garbage.label",
+        defaultDuty = false,
+        grades = {
+            [0] = { labelKey = "jobs.garbage.grade_0", paycheck = 160 }
+        }
+    },
+    mechanic = {
+        labelKey = "jobs.mechanic.label",
+        defaultDuty = false,
+        grades = {
+            [0] = { labelKey = "jobs.mechanic.grade_0", paycheck = 250 },
+            [1] = { labelKey = "jobs.mechanic.grade_1", paycheck = 350 }
         }
     }
 }

@@ -1,0 +1,9 @@
+body { margin: 0; font-family: Arial, sans-serif; background: transparent; color: #fff; }
+.hidden { display: none !important; }
+#app { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); }
+#app.hidden { display: none !important; }
+.panel { width: 360px; background: #111827; padding: 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 10px; }
+input, textarea, button { padding: 10px; border-radius: 8px; border: none; }
+textarea { min-height: 80px; }
+button { background: #2563eb; color: #fff; cursor: pointer; }
+#inbox { font-size: 12px; opacity: 0.9; }

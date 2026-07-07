@@ -1,6 +1,3 @@
-local callbackIndex = 0
-local pendingCallbacks = {}
-local localPlayerState = {}
 local currentLocale = NexusConfig.Framework.defaultLocale
 
 local function showNotification(message)
@@ -9,31 +6,9 @@ local function showNotification(message)
     EndTextCommandThefeedPostTicker(false, false)
 end
 
-local function nextCallbackId()
-    callbackIndex = callbackIndex + 1
-    return ("cb_%s"):format(callbackIndex)
-end
-
-function TriggerNexusCallback(name, payload, cb)
-    local requestId = nextCallbackId()
-    pendingCallbacks[requestId] = cb
-    TriggerServerEvent(NexusEvents.callbackRequest, requestId, name, payload or {})
-end
-
-RegisterNetEvent(NexusEvents.callbackResponse, function(requestId, result, errorCode)
-    local cb = pendingCallbacks[requestId]
-    if not cb then
-        return
-    end
-
-    pendingCallbacks[requestId] = nil
-    cb(result, errorCode)
-end)
-
 RegisterNetEvent(NexusEvents.playerLoaded, function(playerData)
-    localPlayerState = playerData
+    local spawn = playerData.position or playerData.spawn or {}
     currentLocale = playerData.locale or NexusConfig.Framework.defaultLocale
-    local spawn = playerData.spawn or {}
 
     DoScreenFadeOut(500)
     while not IsScreenFadedOut() do
@@ -46,16 +21,20 @@ RegisterNetEvent(NexusEvents.playerLoaded, function(playerData)
     FreezeEntityPosition(ped, false)
     DoScreenFadeIn(500)
 
-    print(("[nexus-core] %s"):format(NexusTranslate(currentLocale, "core.loaded_character", playerData.name)))
+    if NexusConfig.Framework.debug then
+        print(("[nexus-core] %s"):format(NexusTranslate(currentLocale, "core.loaded_character", playerData.name)))
+    end
 end)
 
 RegisterNetEvent(NexusEvents.localeChanged, function(locale)
     currentLocale = locale or NexusConfig.Framework.defaultLocale
-    localPlayerState.locale = currentLocale
+    if Nexus.PlayerData then
+        Nexus.PlayerData.locale = currentLocale
+    end
 end)
 
 RegisterNetEvent(NexusEvents.playerUnloaded, function()
-    localPlayerState = {}
+    currentLocale = NexusConfig.Framework.defaultLocale
 end)
 
 RegisterCommand("lang", function(_, args)

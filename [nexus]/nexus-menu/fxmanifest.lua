@@ -4,6 +4,7 @@ lua54 "yes"
 
 name "nexus-menu"
 description "Menu module for Nexus Core"
+version "0.0.2-beta"
 
 dependency "nexus-core"
 

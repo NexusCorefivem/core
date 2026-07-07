@@ -15,6 +15,16 @@ function post(endpoint, payload) {
     }).then((response) => response.json());
 }
 
+function setVisible(visible) {
+    if (visible) {
+        app.classList.remove("hidden");
+        app.style.display = "flex";
+    } else {
+        app.classList.add("hidden");
+        app.style.display = "none";
+    }
+}
+
 function setStatus(message) {
     statusText.textContent = message || "";
 }
@@ -51,14 +61,26 @@ function renderCharacters(characters) {
 window.addEventListener("message", (event) => {
     const message = event.data;
     if (message.action === "open") {
-        app.classList.remove("hidden");
+        setVisible(true);
         renderCharacters(message.payload.characters || []);
         renderLocales(message.payload.locales || ["nl", "en", "de", "fr"]);
+
+        if (message.payload.loading) {
+            setStatus("Loading characters...");
+            return;
+        }
+
+        if (message.payload.error) {
+            setStatus(`Failed to load characters (${message.payload.error}).`);
+            return;
+        }
+
         setStatus("");
     }
 
     if (message.action === "close") {
-        app.classList.add("hidden");
+        setVisible(false);
+        setStatus("");
     }
 });
 
@@ -67,7 +89,11 @@ characterList.addEventListener("click", async (event) => {
     const deleteId = event.target.getAttribute("data-delete");
 
     if (selectId) {
-        await post("character:select", { id: Number(selectId) });
+        const result = await post("character:select", { id: Number(selectId) });
+        if (result.ok) {
+            setVisible(false);
+            setStatus("");
+        }
     }
 
     if (deleteId) {
@@ -95,7 +121,12 @@ createForm.addEventListener("submit", async (event) => {
     }
 
     createForm.reset();
-    setStatus("Character created.");
+    setVisible(false);
+    setStatus("");
 });
 
-closeButton.addEventListener("click", () => post("character:close"));
+closeButton.addEventListener("click", async () => {
+    await post("character:close");
+    setVisible(false);
+    setStatus("");
+});

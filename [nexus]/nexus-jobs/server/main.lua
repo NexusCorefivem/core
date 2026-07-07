@@ -25,6 +25,7 @@ exports("SetJob", function(source, jobName, grade, onduty)
     end
 
     player:SetJob(jobName, grade, onduty)
+    player:Save()
     return true
 end)
 
@@ -36,6 +37,7 @@ RegisterNetEvent("nexus:jobs:setDuty", function(onduty)
     end
 
     player.job.onduty = onduty == true
+    SyncPlayerData(source, "job", player.job)
     notifyLocalized(source, onduty and "jobs.duty_on" or "jobs.duty_off")
 end)
 
@@ -48,7 +50,7 @@ CreateThread(function()
     while true do
         Wait(30 * 60000)
 
-        for source, player in pairs(NexusPlayers) do
+        for source, player in pairs(GetNexusPlayers()) do
             local job = getJobConfig(player.job.name)
             local grade = job and job.grades[player.job.grade]
 

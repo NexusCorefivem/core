@@ -1,0 +1,1 @@
+-- Gang assignment is server-only via exports. No public net events.

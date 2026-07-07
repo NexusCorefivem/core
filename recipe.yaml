@@ -2,10 +2,10 @@ $engine: 3
 $minFxVersion: 12913
 $onesync: on
 name: Nexus Core
-version: 1.0.0
+version: 0.0.2-beta
 author: Nexus
 description: |
-  Nexus Core txAdmin custom recipe.
+  Nexus Core txAdmin custom recipe (0.0.2-beta).
   Import this file in txAdmin as a custom recipe and make sure the src repository below points to your own Nexus Core GitHub repository.
 
 tasks:
@@ -47,6 +47,9 @@ tasks:
 
   - action: query_database
     file: ./resources/[nexus]/nexus-core/sql/schema.sql
+
+  - action: query_database
+    file: ./resources/[nexus]/nexus-core/sql/seed.sql
 
   - action: remove_path
     path: ./tmp/nexus-core

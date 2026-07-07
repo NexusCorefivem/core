@@ -59,3 +59,34 @@ function NexusShared.IsAllowedKey(value, maxLength)
 
     return value:match("^[%w_%-]+$") ~= nil
 end
+
+if not IsDuplicityVersion() then
+    function NexusShared.CreateProximityLoop(getEntries, onInteract)
+        CreateThread(function()
+            while true do
+                local waitMs = 1000
+                local ped = PlayerPedId()
+                local position = GetEntityCoords(ped)
+
+                for entryId, entry in pairs(getEntries()) do
+                    local coords = entry.coords
+                    if coords then
+                        local target = vector3(coords.x, coords.y, coords.z)
+                        if #(position - target) <= (entry.radius or 2.0) then
+                            waitMs = 0
+                            BeginTextCommandDisplayHelp("STRING")
+                            AddTextComponentSubstringPlayerName(entry.label or "[E]")
+                            EndTextCommandDisplayHelp(0, false, true, -1)
+
+                            if IsControlJustReleased(0, 38) then
+                                onInteract(entryId, entry)
+                            end
+                        end
+                    end
+                end
+
+                Wait(waitMs)
+            end
+        end)
+    end
+end

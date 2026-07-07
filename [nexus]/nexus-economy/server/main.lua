@@ -30,6 +30,7 @@ exports("AddMoney", function(source, account, amount)
     end
 
     player:AddMoney(account, amount)
+    player:Save()
     return true
 end)
 
@@ -43,7 +44,11 @@ exports("RemoveMoney", function(source, account, amount)
         return false
     end
 
-    return player:RemoveMoney(account, amount)
+    local removed = player:RemoveMoney(account, amount)
+    if removed then
+        player:Save()
+    end
+    return removed
 end)
 
 exports("GetMoney", function(source, account)
@@ -64,28 +69,42 @@ RegisterNexusCallback("nexus:economy:getBalances", function(source)
     return player and player.money or nil
 end)
 
-RegisterNetEvent("nexus:economy:transferBank", function(targetSource, amount)
-    local source = source
-    targetSource = tonumber(targetSource)
-    amount = tonumber(amount) or 0
+RegisterNexusCallback("nexus:economy:transferBank", function(source, payload)
+    if type(payload) ~= "table" then
+        return false
+    end
 
-    if not targetSource or targetSource == source or amount <= 0 or amount > 1000000 then
-        return
+    local targetSource = tonumber(payload.target)
+    local amount = math.floor(tonumber(payload.amount) or 0)
+
+    if not targetSource or targetSource == source or amount <= 0 or amount > 100000 then
+        return false
+    end
+
+    if not NexusSecurity.CheckRateLimit(source, "economy:transfer", 5) then
+        return false
+    end
+
+    if not NexusSecurity.IsNearPlayer(source, targetSource, 5.0) then
+        return false
     end
 
     local sender = getPlayerOrError(source)
     local receiver = getPlayerOrError(targetSource)
 
     if not sender or not receiver then
-        return
+        return false
     end
 
     if not sender:RemoveMoney("bank", amount) then
         notifyLocalized(source, "economy.insufficient_bank")
-        return
+        return false
     end
 
     receiver:AddMoney("bank", amount)
+    sender:Save()
+    receiver:Save()
     notifyLocalized(source, "economy.transfer_complete", amount)
     notifyLocalized(targetSource, "economy.transfer_received", amount)
+    return true
 end)

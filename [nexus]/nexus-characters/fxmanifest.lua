@@ -4,6 +4,7 @@ lua54 "yes"
 
 name "nexus-characters"
 description "Character helpers for Nexus Core"
+version "0.0.2-beta"
 
 dependency "nexus-core"
 
@@ -15,5 +16,17 @@ files {
     "html/app.js"
 }
 
-server_script "server/main.lua"
+shared_scripts {
+    "@nexus-core/shared/config.lua",
+    "@nexus-core/shared/events.lua",
+    "@nexus-core/shared/utils.lua",
+    "@nexus-core/shared/locales.lua",
+    "@nexus-core/shared/callback_client.lua"
+}
+
+server_scripts {
+    "@nexus-core/bridge/server.lua",
+    "server/main.lua"
+}
+
 client_script "client/main.lua"

@@ -10,7 +10,7 @@ body {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 #app {
@@ -20,6 +20,18 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    pointer-events: auto;
+}
+
+#app.hidden {
+    display: none !important;
+    pointer-events: none;
+}
+
+input,
+select,
+button {
+    pointer-events: auto;
 }
 
 .panel {

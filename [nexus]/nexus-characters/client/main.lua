@@ -1,13 +1,47 @@
 local isCharacterUiOpen = false
 local currentCharacters = {}
+local uiSession = 0
 
-local function setUiVisible(visible, payload)
-    isCharacterUiOpen = visible
-    SetNuiFocus(visible, visible)
+local function setPlayerFrozen(frozen)
+    local ped = PlayerPedId()
+    FreezeEntityPosition(ped, frozen)
+end
+
+local function sendUiMessage(action, payload)
     SendNUIMessage({
-        action = visible and "open" or "close",
+        action = action,
         payload = payload or {}
     })
+end
+
+local function setUiVisible(visible, payload)
+    if not visible then
+        uiSession = uiSession + 1
+    end
+
+    isCharacterUiOpen = visible
+
+    if visible then
+        ShutdownLoadingScreen()
+        ShutdownLoadingScreenNui()
+        setPlayerFrozen(true)
+        DisplayRadar(false)
+        SetNuiFocus(true, true)
+        sendUiMessage("open", payload)
+    else
+        SetNuiFocus(false, false)
+        setPlayerFrozen(false)
+        DisplayRadar(true)
+        sendUiMessage("close")
+    end
+end
+
+local function updateCharacterUi(session, payload)
+    if session ~= uiSession or not isCharacterUiOpen then
+        return
+    end
+
+    sendUiMessage("open", payload)
 end
 
 local function applyAppearance(data)
@@ -85,13 +119,34 @@ local function buildCharacterPayload(characters)
 end
 
 local function openCharacterUi()
-    TriggerNexusCallback("nexus:characters:list", {}, function(characters)
+    uiSession = uiSession + 1
+    local session = uiSession
+
+    setUiVisible(true, {
+        characters = {},
+        locales = NexusGetSupportedLocales(),
+        loading = true
+    })
+
+    TriggerNexusCallback("nexus:characters:list", {}, function(characters, errorCode)
+        if errorCode then
+            updateCharacterUi(session, {
+                characters = {},
+                locales = NexusGetSupportedLocales(),
+                loading = false,
+                error = errorCode
+            })
+            return
+        end
+
         currentCharacters = characters or {}
-        setUiVisible(true, buildCharacterPayload(currentCharacters))
+        updateCharacterUi(session, buildCharacterPayload(currentCharacters))
     end)
 end
 
 RegisterNetEvent(NexusEvents.playerLoaded, function(playerData)
+    setUiVisible(false)
+
     if playerData.appearance then
         applyAppearance(playerData.appearance)
     end
@@ -151,6 +206,26 @@ end, false)
 exports("OpenCharacterUi", openCharacterUi)
 
 CreateThread(function()
-    Wait(1500)
+    while true do
+        if isCharacterUiOpen then
+            SetNuiFocus(true, true)
+            DisableAllControlActions(0)
+            EnableControlAction(0, 245, true)
+            EnableControlAction(0, 249, true)
+            EnableControlAction(0, 250, true)
+        end
+
+        Wait(0)
+    end
+end)
+
+CreateThread(function()
+    ShutdownLoadingScreen()
+    ShutdownLoadingScreenNui()
+    while not NetworkIsSessionStarted() do
+        Wait(100)
+    end
+
+    Wait(500)
     openCharacterUi()
 end)

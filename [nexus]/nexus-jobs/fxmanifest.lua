@@ -4,7 +4,20 @@ lua54 "yes"
 
 name "nexus-jobs"
 description "Jobs and duty management for Nexus Core"
+version "0.0.2-beta"
 
 dependency "nexus-core"
 
-server_script "server/main.lua"
+shared_scripts {
+    "@nexus-core/shared/config.lua",
+    "@nexus-core/shared/events.lua",
+    "@nexus-core/shared/utils.lua",
+    "@nexus-core/shared/locales.lua"
+}
+
+server_scripts {
+    "@nexus-core/bridge/server.lua",
+    "server/main.lua"
+}
+
+client_script "client/main.lua"

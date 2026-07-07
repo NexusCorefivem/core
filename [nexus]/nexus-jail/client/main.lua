@@ -1,0 +1,17 @@
+RegisterNetEvent("nexus:jail:client:jail", function(coords)
+    local ped = PlayerPedId()
+    SetEntityCoords(ped, coords.x, coords.y, coords.z, false, false, false, false)
+    SetEntityHeading(ped, coords.w or 0.0)
+    FreezeEntityPosition(ped, true)
+end)
+
+RegisterNetEvent("nexus:jail:client:release", function(coords)
+    local ped = PlayerPedId()
+    FreezeEntityPosition(ped, false)
+    SetEntityCoords(ped, coords.x, coords.y, coords.z, false, false, false, false)
+    SetEntityHeading(ped, coords.w or 0.0)
+end)
+
+RegisterCommand("jail", function(_, args)
+    TriggerServerEvent("nexus:jail:jail", tonumber(args[1]), tonumber(args[2]))
+end, false)
