@@ -1,0 +1,52 @@
+$engine: 3
+$minFxVersion: 12913
+$onesync: on
+name: Nexus Core
+version: 1.0.0
+author: Nexus
+description: |
+  Nexus Core txAdmin custom recipe.
+  Import this file in txAdmin as a custom recipe and make sure the src repository below points to your own Nexus Core GitHub repository.
+
+tasks:
+  - action: connect_database
+
+  - action: ensure_dir
+    path: ./resources
+
+  - action: ensure_dir
+    path: ./resources/[nexus]
+
+  - action: download_github
+    # Change this to your own GitHub repo before importing the recipe in txAdmin.
+    # Example: src: yourusername/nexus-core
+    src: NexusCorefivem/core
+    ref: main
+    dest: ./tmp/nexus-core
+
+  - action: download_github
+    src: https://github.com/citizenfx/cfx-server-data
+    ref: master
+    subpath: resources
+    dest: ./resources/[cfx]
+
+  - action: move_path
+    src: ./tmp/nexus-core/[nexus]
+    dest: ./resources/[nexus]
+    overwrite: true
+
+  - action: move_path
+    src: ./tmp/nexus-core/server.cfg
+    dest: ./server.cfg
+    overwrite: true
+
+  - action: replace_string
+    mode: all_vars
+    file:
+      - ./server.cfg
+
+  - action: query_database
+    file: ./resources/[nexus]/nexus-core/sql/schema.sql
+
+  - action: remove_path
+    path: ./tmp/nexus-core

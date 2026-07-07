@@ -1,0 +1,26 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: transparent;
+}
+
+#notifications {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    min-width: 260px;
+    max-width: 360px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #fff;
+    border-left: 4px solid #2563eb;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}

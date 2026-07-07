@@ -1,0 +1,234 @@
+local function getInventory(ownerType, ownerId)
+    if not NexusShared.IsAllowedKey(ownerType, 30) then
+        return {}
+    end
+
+    ownerId = tostring(ownerId or "")
+    if ownerId == "" or #ownerId > 80 then
+        return {}
+    end
+
+    local row = NexusDatabase.FetchSingle("SELECT items FROM nexus_inventories WHERE owner_type = ? AND owner_id = ?", {
+        ownerType, ownerId
+    })
+
+    if not row then
+        NexusDatabase.Insert("INSERT INTO nexus_inventories (owner_type, owner_id, items) VALUES (?, ?, ?)", {
+            ownerType, ownerId, "[]"
+        })
+        return {}
+    end
+
+    return json.decode(row.items or "[]") or {}
+end
+
+local function hydrateItemsForLocale(items, locale)
+    local hydrated = {}
+
+    for index, item in ipairs(items) do
+        local definition = NexusItems[item.name]
+        local copy = NexusShared.DeepCopy(item)
+        if definition and definition.labelKey then
+            copy.label = NexusTranslate(locale, definition.labelKey)
+        elseif definition and definition.label then
+            copy.label = definition.label
+        else
+            copy.label = item.name
+        end
+
+        hydrated[index] = copy
+    end
+
+    return hydrated
+end
+
+local function notifyLocalized(source, key, ...)
+    local player = GetNexusPlayer(source)
+    local locale = player and player.locale or NexusConfig.Framework.defaultLocale
+    TriggerClientEvent(NexusEvents.notify, source, NexusTranslate(locale, key, ...))
+end
+
+local function saveInventory(ownerType, ownerId, items)
+    if not NexusShared.IsAllowedKey(ownerType, 30) then
+        return false
+    end
+
+    ownerId = tostring(ownerId or "")
+    if ownerId == "" or #ownerId > 80 then
+        return false
+    end
+
+    NexusDatabase.Execute("UPDATE nexus_inventories SET items = ? WHERE owner_type = ? AND owner_id = ?", {
+        json.encode(items), ownerType, ownerId
+    })
+    return true
+end
+
+local function removeItemBySlot(ownerType, ownerId, slot, count)
+    local items = getInventory(ownerType, ownerId)
+    count = tonumber(count) or 0
+    slot = tonumber(slot)
+
+    if not slot or count <= 0 then
+        return false, items
+    end
+
+    for index, item in ipairs(items) do
+        if tonumber(item.slot) == slot then
+            if (tonumber(item.count) or 0) < count then
+                return false, items
+            end
+
+            item.count = item.count - count
+            if item.count <= 0 then
+                table.remove(items, index)
+            end
+
+            for itemIndex, entry in ipairs(items) do
+                entry.slot = itemIndex
+            end
+
+            return saveInventory(ownerType, ownerId, items), items
+        end
+    end
+
+    return false, items
+end
+
+exports("GetPlayerInventory", function(source)
+    local player = GetNexusPlayer(source)
+    if not player then
+        return {}
+    end
+
+    return getInventory("character", tostring(player.characterId))
+end)
+
+exports("AddItem", function(source, itemName, count, metadata)
+    local player = GetNexusPlayer(source)
+    count = tonumber(count) or 0
+
+    if not player or not NexusItems[itemName] or count <= 0 or count > 1000 then
+        return false
+    end
+
+    if metadata ~= nil and type(metadata) ~= "table" then
+        return false
+    end
+
+    local items = getInventory("character", tostring(player.characterId))
+    items[#items + 1] = {
+        slot = #items + 1,
+        name = itemName,
+        count = math.floor(count),
+        metadata = metadata or {}
+    }
+    return saveInventory("character", tostring(player.characterId), items)
+end)
+
+RegisterNexusCallback("nexus:inventory:get", function(source)
+    local player = GetNexusPlayer(source)
+    local locale = player and player.locale or NexusConfig.Framework.defaultLocale
+    local items = exports["nexus-inventory"]:GetPlayerInventory(source)
+    return hydrateItemsForLocale(items, locale)
+end)
+
+RegisterNexusCallback("nexus:inventory:use", function(source, payload)
+    local player = GetNexusPlayer(source)
+    if not player or type(payload) ~= "table" then
+        return false
+    end
+
+    local items = getInventory("character", tostring(player.characterId))
+    local selected
+    for _, item in ipairs(items) do
+        if tonumber(item.slot) == tonumber(payload.slot) then
+            selected = item
+            break
+        end
+    end
+
+    if not selected then
+        return false
+    end
+
+    local success = removeItemBySlot("character", tostring(player.characterId), payload.slot, 1)
+    if success and NexusItems[selected.name] then
+        notifyLocalized(source, "inventory.used_item", NexusTranslate(player.locale, NexusItems[selected.name].labelKey or selected.name))
+    end
+
+    return success
+end)
+
+RegisterNexusCallback("nexus:inventory:drop", function(source, payload)
+    local player = GetNexusPlayer(source)
+    if not player or type(payload) ~= "table" then
+        return false
+    end
+
+    local count = tonumber(payload.count) or 1
+    if count <= 0 then
+        return false
+    end
+
+    local items = getInventory("character", tostring(player.characterId))
+    local selected
+    for _, item in ipairs(items) do
+        if tonumber(item.slot) == tonumber(payload.slot) then
+            selected = item
+            break
+        end
+    end
+
+    local success = removeItemBySlot("character", tostring(player.characterId), payload.slot, count)
+    if success and selected and NexusItems[selected.name] then
+        notifyLocalized(source, "inventory.dropped_item", count, NexusTranslate(player.locale, NexusItems[selected.name].labelKey or selected.name))
+    end
+
+    return success
+end)
+
+RegisterNexusCallback("nexus:inventory:give", function(source, payload)
+    local player = GetNexusPlayer(source)
+    if not player or type(payload) ~= "table" then
+        return false
+    end
+
+    local targetSource = tonumber(payload.target)
+    local count = tonumber(payload.count) or 1
+    if not targetSource or count <= 0 or targetSource == source then
+        return false
+    end
+
+    local targetPlayer = GetNexusPlayer(targetSource)
+    if not targetPlayer then
+        return false
+    end
+
+    local items = getInventory("character", tostring(player.characterId))
+    local selected
+    for _, item in ipairs(items) do
+        if tonumber(item.slot) == tonumber(payload.slot) then
+            selected = item
+            break
+        end
+    end
+
+    if not selected then
+        return false
+    end
+
+    local removed = removeItemBySlot("character", tostring(player.characterId), payload.slot, count)
+    if not removed then
+        return false
+    end
+
+    local given = exports["nexus-inventory"]:AddItem(targetSource, selected.name, count, selected.metadata or {})
+    if given and NexusItems[selected.name] then
+        notifyLocalized(source, "inventory.given_item", count, NexusTranslate(player.locale, NexusItems[selected.name].labelKey or selected.name))
+        local targetLocale = (GetNexusPlayer(targetSource) and GetNexusPlayer(targetSource).locale) or NexusConfig.Framework.defaultLocale
+        TriggerClientEvent(NexusEvents.notify, targetSource, NexusTranslate(targetLocale, "inventory.received_item", count, NexusTranslate(targetLocale, NexusItems[selected.name].labelKey or selected.name)))
+    end
+
+    return given
+end)

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Appearance</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <div id="app" class="hidden">
+        <div class="panel">
+            <h1>Appearance Editor</h1>
+            <div class="grid">
+                <label>Model
+                    <select id="model">
+                        <option value="mp_m_freemode_01">Male Freemode</option>
+                        <option value="mp_f_freemode_01">Female Freemode</option>
+                    </select>
+                </label>
+                <label>Torso Drawable <input id="comp3" type="number" min="0" max="250" value="15"></label>
+                <label>Pants Drawable <input id="comp4" type="number" min="0" max="250" value="21"></label>
+                <label>Shoes Drawable <input id="comp6" type="number" min="0" max="250" value="34"></label>
+                <label>Undershirt Drawable <input id="comp8" type="number" min="0" max="250" value="15"></label>
+                <label>Top Drawable <input id="comp11" type="number" min="0" max="250" value="15"></label>
+            </div>
+            <div class="row">
+                <button id="previewButton">Preview</button>
+                <button id="saveButton">Save</button>
+                <button id="closeButton" class="ghost">Close</button>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
